@@ -177,9 +177,6 @@ class CONTROL_DE_MOTORES{
 
 class ENCONTRAR_SALIDA : public MEDIR_DISTANCIA, public CONTROL_DE_MOTORES{
   public:
-  #define MPU6050_ADDRESS_AD0_LOW     0x68      // direccion I2C con AD0 en LOW o sin conexion
-  #define MPU6050_ADDRESS_AD0_HIGH    0x69      // direccion I2C con AD0 en HIGH
-  #define MPU6050_DEFAULT_ADDRESS     MPU6050_ADDRESS_AD0_LOW // por defecto AD0 en LOW
   
   static Simple_MPU6050 mpu;       // crea objeto con nombre mpu
   static int ENABLE_MPU_OVERFLOW_PROTECTION();   // activa proteccion
@@ -187,13 +184,10 @@ class ENCONTRAR_SALIDA : public MEDIR_DISTANCIA, public CONTROL_DE_MOTORES{
   static float distancia;
   static float distanciaMax;
   
-  #define spamtimer(t) for (static uint32_t SpamTimer; (uint32_t)(millis() - SpamTimer) >= (t); SpamTimer = millis())
+  static spamtimer(uint8_t t){
+    for(static uint32_t SpamTimer; (uint32_t)(millis() - SpamTimer) >= (t); SpamTimer = millis())
+   }
   // spamtimer funcion para generar demora al escribir en monitor serie sin usar delay()
-  
-  #define printfloatx(Name,Variable,Spaces,Precision,EndTxt) print(Name); {char S[(Spaces + Precision + 3)];Serial.print(F(" ")); Serial.print(dtostrf((float)Variable,Spaces,Precision ,S));}Serial.print(EndTxt);
-  // printfloatx funcion para mostrar en monitor serie datos para evitar el uso se multiples print()
-
- 
   
   static void encontrar_Salida (int16_t *gyro, int16_t *accel, int32_t *quat, uint32_t *timestamp) {  
     MEDIR_DISTANCIA medirDistancia;  //instancia medirDistancia con la clase MEDIR_DISTANCIA
@@ -238,26 +232,26 @@ class ENCONTRAR_SALIDA : public MEDIR_DISTANCIA, public CONTROL_DE_MOTORES{
   }
 
   
-  static void setup_Encontrar_Salida(){
+  static void setup_Encontrar_Salida(word address){
     for(int x = 0; x <= 1; x++){//Realiza la funcion de "setup"
       uint8_t val;
-      #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE  // activacion de bus I2C a 400 Khz
+      if (I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE) {  // activacion de bus I2C a 400 Khz
         Wire.begin();
         Wire.setClock(400000);
-      #elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
+      } else if (I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE) {
         Fastwire::setup(400, true);
-      #endif
+      }
         
       Serial.begin(115200);     // inicializacion de monitor serie a 115200 bps
       while (!Serial);      // espera a enumeracion en caso de modelos con USB nativo
       //Serial.println(F("Inicio:"));   // muestra texto estatico
       
-//      #ifdef OFFSETS 
-//      #else                   // sin no existen OFFSETS
-//        mpu.SetAddress(MPU6050_ADDRESS_AD0_LOW).CalibrateMPU().load_DMP_Image();  // inicializacion de sensor
-//      #endif
-//        mpu.on_FIFO(encontrar_Salida);   // llamado a funcion mostrar_valores si memoria FIFO tiene valores
-//    }
+      if (OFFSETS == NULL) { // sin no existen OFFSETS                
+        mpu.SetAddress(address).CalibrateMPU().load_DMP_Image();  // inicializacion de sensor
+      }
+      
+      mpu.on_FIFO(encontrar_Salida);   // llamado a funcion mostrar_valores si memoria FIFO tiene valores
+    }
   }
 
 };
